@@ -1,13 +1,9 @@
-import { app, BrowserWindow, shell, ipcMain } from "electron";
+import { app, BrowserWindow, shell } from "electron";
 import path from "path";
+import { initDb, closeDb } from "./lib/db";
 import { registerIpcHandlers } from "./ipc";
 
 const isDev = process.env.NODE_ENV === "development";
-
-// Set database path before any Prisma import
-if (!isDev) {
-  process.env.DATABASE_URL = `file:${path.join(app.getPath("userData"), "database", "pos.db")}`;
-}
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -42,10 +38,7 @@ const createWindow = (): void => {
 
   mainWindow.once("ready-to-show", () => {
     mainWindow?.show();
-
-    if (isDev) {
-      mainWindow?.webContents.openDevTools({ mode: "detach" });
-    }
+    if (isDev) mainWindow?.webContents.openDevTools({ mode: "detach" });
   });
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -59,30 +52,27 @@ const createWindow = (): void => {
 };
 
 app.whenReady().then(async () => {
+  await initDb();
   await registerIpcHandlers();
   createWindow();
 
   app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
 
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-  }
+  if (process.platform !== "darwin") app.quit();
 });
 
-// Security: prevent new window creation
+app.on("before-quit", async () => {
+  await closeDb();
+});
+
+// Security: block unexpected navigation
 app.on("web-contents-created", (_, contents) => {
   contents.on("will-navigate", (event, url) => {
     if (isDev && url.startsWith("http://localhost:3000")) return;
     event.preventDefault();
   });
 });
-
-ipcMain.handle("app:getVersion", () => app.getVersion());
-ipcMain.handle("app:getPlatform", () => process.platform);
-ipcMain.handle("app:getDataPath", () => app.getPath("userData"));

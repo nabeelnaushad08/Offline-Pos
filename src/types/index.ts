@@ -1,6 +1,7 @@
 // Foundation type exports — domain types are added per module
 
 export type { SettingRecord, DatabaseInfo, BackupResult, ElectronAPI } from "./api";
+export * from "./enums";
 
 // ── Utility types ────────────────────────────────────────────────────────────
 

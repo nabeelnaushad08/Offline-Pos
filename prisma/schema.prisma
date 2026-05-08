@@ -1,5 +1,6 @@
-// Prisma schema — foundation only
-// Business modules (products, inventory, sales, etc.) are added separately
+// Offline POS — complete Prisma schema (SQLite)
+// SQLite does not support native enums; all enum-like fields use String
+// with valid values enforced at the application layer (see src/types/enums.ts)
 
 generator client {
   provider = "prisma-client-js"
@@ -10,28 +11,383 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ── Foundation Models ────────────────────────────────────────────────────────
+// ── Role ─────────────────────────────────────────────────────────────────────
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique // ADMIN | MANAGER | CASHIER | INVENTORY_CLERK
+  displayName String
+  permissions String   // JSON: string[] of permission keys
+  isSystem    Boolean  @default(false) // protected — cannot be deleted
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users User[]
+
+  @@map("roles")
+}
+
+// ── User ─────────────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  email        String?  @unique
+  passwordHash String
+  fullName     String
+  phone        String?
+  status       String   @default("ACTIVE") // ACTIVE | INACTIVE | SUSPENDED
+  pin          String?  // hashed short PIN for quick-login
+  avatar       String?  // absolute file path
+  roleId       String
+  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  role              Role            @relation(fields: [roleId], references: [id])
+  sales             Sale[]
+  purchasesCreated  Purchase[]      @relation("PurchaseCreatedBy")
+  purchasesReceived Purchase[]      @relation("PurchaseReceivedBy")
+  stockMovements    StockMovement[]
+  activityLogs      ActivityLog[]
+
+  @@index([username])
+  @@index([roleId])
+  @@index([status])
+  @@map("users")
+}
+
+// ── Category ─────────────────────────────────────────────────────────────────
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  image       String?  // absolute file path
+  parentId    String?  // self-referential for hierarchy
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryHierarchy")
+  products Product[]
+
+  @@index([parentId])
+  @@index([isActive])
+  @@map("categories")
+}
+
+// ── Supplier ─────────────────────────────────────────────────────────────────
+
+model Supplier {
+  id          String   @id @default(cuid())
+  name        String
+  code        String   @unique
+  contactName String?
+  email       String?
+  phone       String?
+  address     String?
+  city        String?
+  country     String?
+  taxNumber   String?
+  notes       String?
+  isActive    Boolean  @default(true)
+  balance     Float    @default(0) // outstanding payable; positive = we owe them
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  products  Product[]
+  purchases Purchase[]
+
+  @@index([code])
+  @@index([isActive])
+  @@map("suppliers")
+}
+
+// ── Product ──────────────────────────────────────────────────────────────────
+
+model Product {
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique
+  sku           String   @unique
+  barcode       String?  @unique
+  description   String?
+  categoryId    String
+  supplierId    String?
+  costPrice     Float    @default(0)
+  sellingPrice  Float    @default(0)
+  taxRate       Float    @default(0) // percentage, e.g. 16.0
+  unit          String   @default("pcs") // pcs | kg | ltr | box …
+  stockQuantity Float    @default(0)
+  minStockLevel Float    @default(0) // reorder point
+  maxStockLevel Float?
+  image         String?  // absolute file path
+  status        String   @default("ACTIVE") // ACTIVE | INACTIVE | DISCONTINUED
+  isTrackStock  Boolean  @default(true)
+  expiryDate    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  category       Category        @relation(fields: [categoryId], references: [id])
+  supplier       Supplier?       @relation(fields: [supplierId], references: [id])
+  saleItems      SaleItem[]
+  purchaseItems  PurchaseItem[]
+  stockMovements StockMovement[]
+
+  @@index([categoryId])
+  @@index([supplierId])
+  @@index([sku])
+  @@index([barcode])
+  @@index([status])
+  @@index([stockQuantity]) // supports low-stock queries
+  @@map("products")
+}
+
+// ── Customer ─────────────────────────────────────────────────────────────────
+
+model Customer {
+  id            String   @id @default(cuid())
+  name          String
+  code          String   @unique
+  email         String?  @unique
+  phone         String?
+  address       String?
+  city          String?
+  country       String?
+  taxNumber     String?
+  loyaltyPoints Int      @default(0)
+  creditLimit   Float    @default(0)
+  balance       Float    @default(0) // positive = they owe us
+  notes         String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sales Sale[]
+
+  @@index([code])
+  @@index([phone])
+  @@index([isActive])
+  @@map("customers")
+}
+
+// ── Sale ─────────────────────────────────────────────────────────────────────
+
+model Sale {
+  id             String   @id @default(cuid())
+  saleNumber     String   @unique // SAL-YYYYMMDD-NNNN
+  status         String   @default("PENDING") // PENDING | COMPLETED | VOIDED | REFUNDED
+  customerId     String?
+  userId         String   // cashier
+  subtotal       Float    @default(0)
+  taxAmount      Float    @default(0)
+  discountAmount Float    @default(0)
+  roundingAmount Float    @default(0)
+  totalAmount    Float    @default(0)
+  paidAmount     Float    @default(0)
+  changeAmount   Float    @default(0)
+  paymentMethod  String   @default("CASH") // CASH | CARD | MOBILE_MONEY | BANK_TRANSFER | CREDIT | SPLIT
+  paymentRef     String?  // external payment reference
+  notes          String?
+  voidReason     String?
+  voidedByUserId String?
+  voidedAt       DateTime?
+  receiptPrinted Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  customer       Customer?       @relation(fields: [customerId], references: [id])
+  user           User            @relation(fields: [userId], references: [id])
+  items          SaleItem[]
+  stockMovements StockMovement[]
+
+  @@index([saleNumber])
+  @@index([status])
+  @@index([customerId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([paymentMethod])
+  @@map("sales")
+}
+
+// ── SaleItem ─────────────────────────────────────────────────────────────────
+
+model SaleItem {
+  id          String   @id @default(cuid())
+  saleId      String
+  productId   String
+  productName String   // snapshot at time of sale
+  productSku  String
+  quantity    Float
+  unitPrice   Float    // selling price at time of sale
+  costPrice   Float    // cost at time of sale (for margin reports)
+  taxRate     Float    @default(0)
+  taxAmount   Float    @default(0)
+  discount    Float    @default(0) // item-level discount amount
+  totalAmount Float    @default(0)
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  sale    Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([saleId])
+  @@index([productId])
+  @@map("sale_items")
+}
+
+// ── Purchase ─────────────────────────────────────────────────────────────────
+
+model Purchase {
+  id               String    @id @default(cuid())
+  purchaseNumber   String    @unique // PO-YYYYMMDD-NNNN
+  status           String    @default("DRAFT") // DRAFT | ORDERED | PARTIAL | RECEIVED | CANCELLED
+  supplierId       String
+  createdByUserId  String
+  receivedByUserId String?
+  subtotal         Float     @default(0)
+  taxAmount        Float     @default(0)
+  shippingCost     Float     @default(0)
+  discountAmount   Float     @default(0)
+  totalAmount      Float     @default(0)
+  paidAmount       Float     @default(0)
+  paymentMethod    String?   // CASH | CARD | BANK_TRANSFER …
+  paymentRef       String?
+  expectedDate     DateTime?
+  receivedDate     DateTime?
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  supplier       Supplier        @relation(fields: [supplierId], references: [id])
+  createdBy      User            @relation("PurchaseCreatedBy", fields: [createdByUserId], references: [id])
+  receivedBy     User?           @relation("PurchaseReceivedBy", fields: [receivedByUserId], references: [id])
+  items          PurchaseItem[]
+  stockMovements StockMovement[]
+
+  @@index([purchaseNumber])
+  @@index([status])
+  @@index([supplierId])
+  @@index([createdAt])
+  @@map("purchases")
+}
+
+// ── PurchaseItem ─────────────────────────────────────────────────────────────
+
+model PurchaseItem {
+  id               String   @id @default(cuid())
+  purchaseId       String
+  productId        String
+  productName      String   // snapshot
+  productSku       String
+  quantityOrdered  Float
+  quantityReceived Float    @default(0)
+  unitCost         Float
+  taxRate          Float    @default(0)
+  taxAmount        Float    @default(0)
+  discount         Float    @default(0)
+  totalAmount      Float    @default(0)
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  purchase Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id])
+
+  @@index([purchaseId])
+  @@index([productId])
+  @@map("purchase_items")
+}
+
+// ── StockMovement ────────────────────────────────────────────────────────────
+
+model StockMovement {
+  id             String   @id @default(cuid())
+  productId      String
+  movementType   String   // OPENING_STOCK | PURCHASE | SALE | SALE_RETURN | PURCHASE_RETURN | ADJUSTMENT_IN | ADJUSTMENT_OUT | TRANSFER
+  quantity       Float    // positive = in, negative = out
+  quantityBefore Float
+  quantityAfter  Float
+  unitCost       Float?
+  referenceType  String?  // "sale" | "purchase" | "adjustment"
+  referenceId    String?
+  saleId         String?
+  purchaseId     String?
+  userId         String
+  notes          String?
+  createdAt      DateTime @default(now())
+
+  product  Product   @relation(fields: [productId], references: [id])
+  user     User      @relation(fields: [userId], references: [id])
+  sale     Sale?     @relation(fields: [saleId], references: [id])
+  purchase Purchase? @relation(fields: [purchaseId], references: [id])
+
+  @@index([productId])
+  @@index([movementType])
+  @@index([saleId])
+  @@index([purchaseId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("stock_movements")
+}
+
+// ── Setting ──────────────────────────────────────────────────────────────────
 
 model Setting {
   id        String   @id @default(cuid())
   key       String   @unique
   value     String
+  group     String   @default("general") // general | pos | receipt | inventory | backup
+  label     String?  // human-readable label shown in the settings UI
+  isPublic  Boolean  @default(true)      // false = admin-only setting
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([group])
   @@map("settings")
 }
 
-model AuditLog {
+// ── Printer ──────────────────────────────────────────────────────────────────
+
+model Printer {
+  id         String   @id @default(cuid())
+  name       String
+  type       String   @default("RECEIPT") // RECEIPT | LABEL | REPORT | KITCHEN
+  connection String   @default("usb")     // usb | network | bluetooth
+  address    String?  // IP:port for network, MAC for bluetooth
+  paperWidth Int      @default(80)        // mm: 58 | 80
+  isDefault  Boolean  @default(false)
+  isActive   Boolean  @default(true)
+  options    String?  // JSON blob for driver-specific settings
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([type])
+  @@index([isDefault])
+  @@map("printers")
+}
+
+// ── ActivityLog ──────────────────────────────────────────────────────────────
+
+model ActivityLog {
   id        String   @id @default(cuid())
-  action    String   // CREATE | UPDATE | DELETE | LOGIN | LOGOUT | etc.
-  entity    String   // Table / domain name
-  entityId  String?
   userId    String?
-  data      String?  // JSON snapshot
+  action    String   // CREATE | UPDATE | DELETE | LOGIN | LOGOUT | SALE_COMPLETE | SALE_VOID | SALE_REFUND | PURCHASE_RECEIVE | STOCK_ADJUST | PRINT | BACKUP | RESTORE | SETTINGS_CHANGE
+  entity    String   // model name, e.g. "Sale", "Product"
+  entityId  String?
+  summary   String?  // human-readable description
+  data      String?  // JSON: { before?, after?, meta? }
   createdAt DateTime @default(now())
 
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
   @@index([entity, entityId])
   @@index([createdAt])
-  @@map("audit_logs")
+  @@map("activity_logs")
 }
