@@ -1,0 +1,60 @@
+appId: com.offlinepos.app
+productName: Offline POS
+copyright: Copyright © 2024 Offline POS
+
+directories:
+  output: dist
+  buildResources: build
+
+files:
+  - electron-dist/**/*
+  - out/**/*
+  - prisma/schema.prisma
+  - package.json
+  - "!node_modules/**/*"
+
+extraResources:
+  - from: node_modules/.prisma
+    to: .prisma
+  - from: node_modules/@prisma/client
+    to: "@prisma/client"
+  - from: node_modules/prisma
+    to: prisma
+    filter:
+      - "**/*"
+      - "!node_modules"
+
+extraMetadata:
+  main: electron-dist/main.js
+
+asar: true
+asarUnpack:
+  - "**/*.node"
+  - "**/node_modules/.prisma/**"
+
+mac:
+  category: public.app-category.business
+  icon: build/icon.icns
+  hardenedRuntime: true
+  gatekeeperAssess: false
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+  icon: build/icon.png
+  category: Office
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true

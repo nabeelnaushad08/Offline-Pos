@@ -1,0 +1,37 @@
+// Prisma schema — foundation only
+// Business modules (products, inventory, sales, etc.) are added separately
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ── Foundation Models ────────────────────────────────────────────────────────
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String   // CREATE | UPDATE | DELETE | LOGIN | LOGOUT | etc.
+  entity    String   // Table / domain name
+  entityId  String?
+  userId    String?
+  data      String?  // JSON snapshot
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
