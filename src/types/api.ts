@@ -2,6 +2,7 @@
 
 import type { AuthUser, LoginResult, ValidateSessionResult, ChangePasswordResult } from "./auth";
 import type { DashboardData } from "./dashboard";
+import type { POSProduct, POSCategory, POSCustomer, CompleteSaleInput, CompleteSaleResult } from "./pos";
 
 export type { AuthUser, AuthRole, AuthSession, LoginResult, ValidateSessionResult, ChangePasswordResult } from "./auth";
 
@@ -56,10 +57,18 @@ export interface ElectronAPI {
     getData: () => Promise<DashboardData>;
   };
 
+  pos: {
+    getCategories: () => Promise<POSCategory[]>;
+    getProducts: (search?: string, categoryId?: string) => Promise<POSProduct[]>;
+    getProductByBarcode: (barcode: string) => Promise<POSProduct | null>;
+    searchCustomers: (term: string) => Promise<POSCustomer[]>;
+    completeSale: (input: CompleteSaleInput) => Promise<CompleteSaleResult>;
+  };
+
   database: {
     backup: (targetPath: string) => Promise<BackupResult>;
     getInfo: () => Promise<DatabaseInfo>;
   };
 }
 
-export type { DashboardData };
+export type { DashboardData, POSProduct, POSCategory, POSCustomer, CompleteSaleInput, CompleteSaleResult };

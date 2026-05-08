@@ -43,7 +43,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "Operations",
     items: [
-      { label: "Point of Sale", href: "/pos", icon: ShoppingCart, badge: "Soon" },
+      { label: "Point of Sale", href: "/pos", icon: ShoppingCart },
       { label: "Inventory", href: "/inventory", icon: Boxes, badge: "Soon" },
       { label: "Customers", href: "/customers", icon: Users, badge: "Soon" },
     ],

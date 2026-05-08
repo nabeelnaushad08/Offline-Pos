@@ -1,7 +1,7 @@
 "use client";
 
 import { isElectron } from "./utils";
-import type { SettingRecord, DatabaseInfo, BackupResult, LoginResult, ValidateSessionResult, ChangePasswordResult, DashboardData } from "@/types/api";
+import type { SettingRecord, DatabaseInfo, BackupResult, LoginResult, ValidateSessionResult, ChangePasswordResult, DashboardData, POSProduct, POSCategory, POSCustomer, CompleteSaleInput, CompleteSaleResult } from "@/types/api";
 
 function requireElectron(): Window["electron"] {
   if (!isElectron()) {
@@ -51,6 +51,25 @@ export const settingsClient = {
 
   delete: (key: string): Promise<void> =>
     requireElectron().settings.delete(key),
+};
+
+// ── POS ───────────────────────────────────────────────────────────────────────
+
+export const posClient = {
+  getCategories: (): Promise<POSCategory[]> =>
+    requireElectron().pos.getCategories(),
+
+  getProducts: (search?: string, categoryId?: string): Promise<POSProduct[]> =>
+    requireElectron().pos.getProducts(search, categoryId),
+
+  getProductByBarcode: (barcode: string): Promise<POSProduct | null> =>
+    requireElectron().pos.getProductByBarcode(barcode),
+
+  searchCustomers: (term: string): Promise<POSCustomer[]> =>
+    requireElectron().pos.searchCustomers(term),
+
+  completeSale: (input: CompleteSaleInput): Promise<CompleteSaleResult> =>
+    requireElectron().pos.completeSale(input),
 };
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────

@@ -74,6 +74,57 @@ const electronAPI = {
       >,
   },
 
+  // ── POS ───────────────────────────────────────────────────────────────────
+  pos: {
+    getCategories: () =>
+      ipcRenderer.invoke("pos:getCategories") as Promise<
+        Array<{ id: string; name: string; slug: string; image: string | null }>
+      >,
+    getProducts: (search?: string, categoryId?: string) =>
+      ipcRenderer.invoke("pos:getProducts", search, categoryId) as Promise<
+        Array<{
+          id: string;
+          name: string;
+          sku: string;
+          barcode: string | null;
+          image: string | null;
+          sellingPrice: number;
+          costPrice: number;
+          taxRate: number;
+          unit: string;
+          stockQuantity: number;
+          categoryId: string;
+          category: { name: string };
+        }>
+      >,
+    getProductByBarcode: (barcode: string) =>
+      ipcRenderer.invoke("pos:getProductByBarcode", barcode) as Promise<{
+        id: string;
+        name: string;
+        sku: string;
+        barcode: string | null;
+        image: string | null;
+        sellingPrice: number;
+        costPrice: number;
+        taxRate: number;
+        unit: string;
+        stockQuantity: number;
+        categoryId: string;
+        category: { name: string };
+      } | null>,
+    searchCustomers: (term: string) =>
+      ipcRenderer.invoke("pos:searchCustomers", term) as Promise<
+        Array<{ id: string; name: string; code: string; phone: string | null; balance: number }>
+      >,
+    completeSale: (input: import("./ipc/pos.handler").CompleteSaleRaw) =>
+      ipcRenderer.invoke("pos:completeSale", input) as Promise<{
+        success: boolean;
+        saleId?: string;
+        saleNumber?: string;
+        error?: string;
+      }>,
+  },
+
   // ── Database management ───────────────────────────────────────────────────
   database: {
     backup: (targetPath: string) =>
