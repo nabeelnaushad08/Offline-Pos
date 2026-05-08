@@ -2,6 +2,7 @@
 
 import { isElectron } from "./utils";
 import type { SettingRecord, DatabaseInfo, BackupResult, LoginResult, ValidateSessionResult, ChangePasswordResult, DashboardData, POSProduct, POSCategory, POSCustomer, CompleteSaleInput, CompleteSaleResult } from "@/types/api";
+import type { InventoryProduct, InventoryCategory, InventorySupplier, InventoryPurchase, StockMovementRecord, StockAdjustInput, ReceivePurchaseItem, PurchaseFormValues } from "@/types/inventory";
 
 function requireElectron(): Window["electron"] {
   if (!isElectron()) {
@@ -87,4 +88,214 @@ export const databaseClient = {
 
   getInfo: (): Promise<DatabaseInfo> =>
     requireElectron().database.getInfo(),
+};
+
+// ── Inventory ─────────────────────────────────────────────────────────────────
+
+type RawProductRow = {
+  id: string; name: string; slug: string; sku: string; barcode: string | null;
+  description: string | null; categoryId: string; supplierId: string | null;
+  costPrice: number; sellingPrice: number; taxRate: number; unit: string;
+  stockQuantity: number; minStockLevel: number; maxStockLevel: number | null;
+  isTrackStock: boolean; status: string; image: string | null;
+  createdAt: string; updatedAt: string;
+  category: { name: string };
+  supplier: { name: string } | null;
+};
+
+type RawCategoryRow = {
+  id: string; name: string; slug: string; description: string | null;
+  parentId: string | null; sortOrder: number; isActive: boolean;
+  _count?: { products: number };
+};
+
+type RawSupplierRow = {
+  id: string; name: string; code: string; contactName: string | null;
+  email: string | null; phone: string | null; address: string | null;
+  city: string | null; country: string | null; taxNumber: string | null;
+  notes: string | null; isActive: boolean; balance: number; createdAt: string;
+  _count?: { products: number };
+};
+
+type RawPurchaseRow = {
+  id: string; purchaseNumber: string; status: string; supplierId: string;
+  subtotal: number; taxAmount: number; shippingCost: number; discountAmount: number;
+  totalAmount: number; paidAmount: number; expectedDate: string | null;
+  receivedDate: string | null; notes: string | null; createdAt: string;
+  supplier: { name: string };
+  createdBy: { fullName: string };
+  items: Array<{
+    id: string; productId: string; productName: string; productSku: string;
+    quantityOrdered: number; quantityReceived: number; unitCost: number; totalAmount: number;
+  }>;
+};
+
+type RawMovementRow = {
+  id: string; productId: string; movementType: string; quantity: number;
+  quantityBefore: number; quantityAfter: number; notes: string | null; createdAt: string;
+  user: { fullName: string } | null;
+  product?: { name: string };
+};
+
+function mapProduct(r: RawProductRow): InventoryProduct {
+  return {
+    ...r,
+    status: r.status as InventoryProduct["status"],
+    categoryName: r.category.name,
+    supplierName: r.supplier?.name ?? null,
+    createdAt: String(r.createdAt),
+    updatedAt: String(r.updatedAt),
+  };
+}
+
+export const inventoryClient = {
+  getProducts: async (filters?: {
+    categoryId?: string;
+    supplierId?: string;
+    status?: string | null;
+    search?: string;
+  }): Promise<InventoryProduct[]> => {
+    const rows = await requireElectron().invoke<RawProductRow[]>("inventory:getProducts", filters);
+    return rows.map(mapProduct);
+  },
+
+  getProduct: async (id: string): Promise<InventoryProduct | null> => {
+    const row = await requireElectron().invoke<RawProductRow | null>("products:get", id);
+    return row ? mapProduct(row) : null;
+  },
+
+  createProduct: async (data: Record<string, unknown>): Promise<InventoryProduct> => {
+    const row = await requireElectron().invoke<RawProductRow>("products:create", data);
+    return mapProduct(row);
+  },
+
+  updateProduct: async (id: string, data: Record<string, unknown>): Promise<InventoryProduct> => {
+    const row = await requireElectron().invoke<RawProductRow>("products:update", id, data);
+    return mapProduct(row);
+  },
+
+  deleteProduct: async (id: string): Promise<void> => {
+    await requireElectron().invoke("products:delete", id);
+  },
+
+  getCategories: async (): Promise<InventoryCategory[]> => {
+    const rows = await requireElectron().invoke<RawCategoryRow[]>("categories:list");
+    return rows.map((r) => ({
+      ...r,
+      productCount: r._count?.products ?? 0,
+    }));
+  },
+
+  createCategory: async (data: Record<string, unknown>): Promise<InventoryCategory> => {
+    const row = await requireElectron().invoke<RawCategoryRow>("categories:create", data);
+    return { ...row, productCount: 0 };
+  },
+
+  updateCategory: async (id: string, data: Record<string, unknown>): Promise<InventoryCategory> => {
+    const row = await requireElectron().invoke<RawCategoryRow>("categories:update", id, data);
+    return { ...row, productCount: row._count?.products ?? 0 };
+  },
+
+  deleteCategory: async (id: string): Promise<void> => {
+    await requireElectron().invoke("categories:delete", id);
+  },
+
+  getSuppliers: async (): Promise<InventorySupplier[]> => {
+    const rows = await requireElectron().invoke<RawSupplierRow[]>("suppliers:list");
+    return rows.map((r) => ({
+      ...r,
+      productCount: r._count?.products ?? 0,
+      createdAt: String(r.createdAt),
+    }));
+  },
+
+  createSupplier: async (data: Record<string, unknown>): Promise<InventorySupplier> => {
+    const row = await requireElectron().invoke<RawSupplierRow>("suppliers:create", data);
+    return { ...row, productCount: 0, createdAt: String(row.createdAt) };
+  },
+
+  updateSupplier: async (id: string, data: Record<string, unknown>): Promise<InventorySupplier> => {
+    const row = await requireElectron().invoke<RawSupplierRow>("suppliers:update", id, data);
+    return { ...row, productCount: row._count?.products ?? 0, createdAt: String(row.createdAt) };
+  },
+
+  getPurchases: async (filters?: { status?: string; supplierId?: string }): Promise<InventoryPurchase[]> => {
+    const rows = await requireElectron().invoke<RawPurchaseRow[]>("purchases:list", filters);
+    return rows.map((r) => ({
+      id: r.id,
+      purchaseNumber: r.purchaseNumber,
+      status: r.status as InventoryPurchase["status"],
+      supplierId: r.supplierId,
+      supplierName: r.supplier.name,
+      subtotal: r.subtotal,
+      taxAmount: r.taxAmount,
+      shippingCost: r.shippingCost,
+      discountAmount: r.discountAmount,
+      totalAmount: r.totalAmount,
+      paidAmount: r.paidAmount,
+      expectedDate: r.expectedDate ? String(r.expectedDate) : null,
+      receivedDate: r.receivedDate ? String(r.receivedDate) : null,
+      notes: r.notes,
+      items: r.items ?? [],
+      createdByName: r.createdBy.fullName,
+      createdAt: String(r.createdAt),
+    }));
+  },
+
+  getPurchase: async (id: string): Promise<InventoryPurchase | null> => {
+    const r = await requireElectron().invoke<RawPurchaseRow | null>("purchases:get", id);
+    if (!r) return null;
+    return {
+      id: r.id,
+      purchaseNumber: r.purchaseNumber,
+      status: r.status as InventoryPurchase["status"],
+      supplierId: r.supplierId,
+      supplierName: r.supplier.name,
+      subtotal: r.subtotal,
+      taxAmount: r.taxAmount,
+      shippingCost: r.shippingCost,
+      discountAmount: r.discountAmount,
+      totalAmount: r.totalAmount,
+      paidAmount: r.paidAmount,
+      expectedDate: r.expectedDate ? String(r.expectedDate) : null,
+      receivedDate: r.receivedDate ? String(r.receivedDate) : null,
+      notes: r.notes,
+      items: r.items ?? [],
+      createdByName: r.createdBy.fullName,
+      createdAt: String(r.createdAt),
+    };
+  },
+
+  createPurchase: async (
+    input: PurchaseFormValues & { createdByUserId: string }
+  ): Promise<{ success: boolean; error?: string }> =>
+    requireElectron().invoke("inventory:createPurchase", input),
+
+  adjustStock: async (
+    input: StockAdjustInput
+  ): Promise<{ success: boolean; before?: number; after?: number; error?: string }> =>
+    requireElectron().invoke("inventory:adjustStock", input),
+
+  receivePurchase: async (
+    purchaseId: string,
+    items: ReceivePurchaseItem[],
+    userId: string
+  ): Promise<{ success: boolean; status?: string; error?: string }> =>
+    requireElectron().invoke("inventory:receivePurchase", purchaseId, items, userId),
+
+  getStockMovements: async (productId: string): Promise<StockMovementRecord[]> => {
+    const rows = await requireElectron().invoke<RawMovementRow[]>("stock:movements", productId);
+    return rows.map((r) => ({
+      id: r.id,
+      productId: r.productId,
+      productName: r.product?.name ?? "",
+      movementType: r.movementType,
+      quantity: r.quantity,
+      quantityBefore: r.quantityBefore,
+      quantityAfter: r.quantityAfter,
+      notes: r.notes,
+      createdAt: String(r.createdAt),
+      userName: r.user?.fullName ?? null,
+    }));
+  },
 };
