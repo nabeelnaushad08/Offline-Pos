@@ -3,6 +3,7 @@
 import { isElectron } from "./utils";
 import type { SettingRecord, DatabaseInfo, BackupResult, LoginResult, ValidateSessionResult, ChangePasswordResult, DashboardData, POSProduct, POSCategory, POSCustomer, CompleteSaleInput, CompleteSaleResult } from "@/types/api";
 import type { InventoryProduct, InventoryCategory, InventorySupplier, InventoryPurchase, StockMovementRecord, StockAdjustInput, ReceivePurchaseItem, PurchaseFormValues } from "@/types/inventory";
+import type { DailySalesRow, MonthlySalesRow, TopProductRow, InventoryValuationSummary, CashFlowRow, SupplierPurchaseRow } from "@/types/reports";
 
 function requireElectron(): Window["electron"] {
   if (!isElectron()) {
@@ -298,4 +299,26 @@ export const inventoryClient = {
       userName: r.user?.fullName ?? null,
     }));
   },
+};
+
+// ── Reports ───────────────────────────────────────────────────────────────────
+
+export const reportsClient = {
+  dailySales: (from: string, to: string): Promise<DailySalesRow[]> =>
+    requireElectron().invoke<DailySalesRow[]>("reports:dailySales", from, to),
+
+  monthlySales: (from: string, to: string): Promise<MonthlySalesRow[]> =>
+    requireElectron().invoke<MonthlySalesRow[]>("reports:monthlySales", from, to),
+
+  topProducts: (from: string, to: string): Promise<TopProductRow[]> =>
+    requireElectron().invoke<TopProductRow[]>("reports:topProducts", from, to),
+
+  inventoryValuation: (): Promise<InventoryValuationSummary> =>
+    requireElectron().invoke<InventoryValuationSummary>("reports:inventoryValuation"),
+
+  cashFlow: (from: string, to: string): Promise<CashFlowRow[]> =>
+    requireElectron().invoke<CashFlowRow[]>("reports:cashFlow", from, to),
+
+  supplierPurchases: (from: string, to: string): Promise<SupplierPurchaseRow[]> =>
+    requireElectron().invoke<SupplierPurchaseRow[]>("reports:supplierPurchases", from, to),
 };

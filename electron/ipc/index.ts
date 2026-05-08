@@ -6,12 +6,14 @@ import { registerAuthHandlers } from "./auth.handler";
 import { registerDashboardHandlers } from "./dashboard.handler";
 import { registerPosHandlers } from "./pos.handler";
 import { registerInventoryHandlers } from "./inventory.handler";
+import { registerReportsHandlers } from "./reports.handler";
 
 export async function registerIpcHandlers(): Promise<void> {
   registerAuthHandlers();
   registerDashboardHandlers();
   registerPosHandlers();
   registerInventoryHandlers();
+  registerReportsHandlers();
   const db = getDb();
 
   // ── App ───────────────────────────────────────────────────────────────────
