@@ -1,11 +1,11 @@
 "use client";
 
 import { isElectron } from "./utils";
-import type { SettingRecord, DatabaseInfo, BackupResult } from "@/types/api";
+import type { SettingRecord, DatabaseInfo, BackupResult, LoginResult, ValidateSessionResult, ChangePasswordResult } from "@/types/api";
 
 function requireElectron(): Window["electron"] {
   if (!isElectron()) {
-    throw new Error("Electron IPC not available. Are you running inside Electron?");
+    throw new Error("Electron IPC not available outside Electron.");
   }
   return window.electron;
 }
@@ -16,6 +16,25 @@ export const appClient = {
   getVersion: () => requireElectron().app.getVersion(),
   getPlatform: () => requireElectron().app.getPlatform(),
   getDataPath: () => requireElectron().app.getDataPath(),
+};
+
+// ── Auth ─────────────────────────────────────────────────────────────────────
+
+export const authClient = {
+  login: (username: string, password: string): Promise<LoginResult> =>
+    requireElectron().auth.login(username, password),
+
+  logout: (userId: string): Promise<{ success: boolean }> =>
+    requireElectron().auth.logout(userId),
+
+  validateSession: (userId: string): Promise<ValidateSessionResult> =>
+    requireElectron().auth.validateSession(userId),
+
+  changePassword: (userId: string, current: string, next: string): Promise<ChangePasswordResult> =>
+    requireElectron().auth.changePassword(userId, current, next),
+
+  hashPassword: (password: string): Promise<string> =>
+    requireElectron().auth.hashPassword(password),
 };
 
 // ── Settings ─────────────────────────────────────────────────────────────────

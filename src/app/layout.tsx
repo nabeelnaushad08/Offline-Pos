@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { AppShell } from "@/components/layout/app-shell";
+import { AuthProvider } from "@/components/auth/auth-provider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -28,7 +28,13 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans`}>
-        <AppShell>{children}</AppShell>
+        {/*
+          AuthProvider handles three phases:
+            1. booting  — Zustand rehydrates from sessionStorage
+            2. login    — shows LoginView (full-screen)
+            3. app      — shows AppShell + page children
+        */}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

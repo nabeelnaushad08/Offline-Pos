@@ -10,15 +10,15 @@
  */
 
 import { PrismaClient } from "@prisma/client";
-import crypto from "crypto";
+import bcrypt from "bcryptjs";
 
 const db = new PrismaClient();
+const BCRYPT_ROUNDS = 10;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function sha256(input: string): string {
-  // NOTE: For production replace with bcrypt / argon2
-  return crypto.createHash("sha256").update(input).digest("hex");
+async function hashPassword(input: string): Promise<string> {
+  return bcrypt.hash(input, BCRYPT_ROUNDS);
 }
 
 function jsonPerms(perms: string[]): string {
@@ -167,8 +167,8 @@ async function main() {
 
   console.log("  ✓ Roles created");
 
-  // ── Admin user ────────────────────────────────────────────────────────────
-  console.log("  Creating admin user…");
+  // ── Users ─────────────────────────────────────────────────────────────────
+  console.log("  Creating users…");
 
   await db.user.upsert({
     where: { username: "admin" },
@@ -176,7 +176,7 @@ async function main() {
     create: {
       username: "admin",
       email: "admin@offlinepos.local",
-      passwordHash: sha256("Admin@123"),
+      passwordHash: await hashPassword("Admin@123"),
       fullName: "System Administrator",
       status: "ACTIVE",
       roleId: adminRole.id,
@@ -189,7 +189,7 @@ async function main() {
     create: {
       username: "manager",
       email: "manager@offlinepos.local",
-      passwordHash: sha256("Manager@123"),
+      passwordHash: await hashPassword("Manager@123"),
       fullName: "Store Manager",
       status: "ACTIVE",
       roleId: managerRole.id,
@@ -311,10 +311,10 @@ async function main() {
   console.log("  ✓ Printer created");
 
   console.log("\n✅  Seed complete.\n");
-  console.log("  Default credentials:");
-  console.log("    Admin   → username: admin    / password: Admin@123");
-  console.log("    Manager → username: manager  / password: Manager@123");
-  console.log("\n  ⚠️  Change passwords before deploying to production.\n");
+  console.log("  Default credentials (bcrypt-hashed):");
+  console.log("    admin   / Admin@123");
+  console.log("    manager / Manager@123");
+  console.log("\n  ⚠️  Change these passwords immediately after first login.\n");
 }
 
 main()

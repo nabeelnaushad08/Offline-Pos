@@ -2,8 +2,10 @@ import { ipcMain, app } from "electron";
 import path from "path";
 import fs from "fs";
 import { getDb } from "../lib/db";
+import { registerAuthHandlers } from "./auth.handler";
 
 export async function registerIpcHandlers(): Promise<void> {
+  registerAuthHandlers();
   const db = getDb();
 
   // ── App ───────────────────────────────────────────────────────────────────
