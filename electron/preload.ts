@@ -125,6 +125,34 @@ const electronAPI = {
       }>,
   },
 
+  // ── Printer ───────────────────────────────────────────────────────────────
+  printer: {
+    getStatus: () =>
+      ipcRenderer.invoke("printer:getStatus") as Promise<
+        import("../src/types/printer").PrinterStatusInfo
+      >,
+    saveConfig: (config: import("../src/types/printer").PrinterConfig) =>
+      ipcRenderer.invoke("printer:saveConfig", config) as Promise<
+        import("../src/types/printer").PrintResult
+      >,
+    printReceipt: (data: import("../src/types/printer").ReceiptData) =>
+      ipcRenderer.invoke("printer:printReceipt", data) as Promise<
+        import("../src/types/printer").PrintResult
+      >,
+    openCashDrawer: () =>
+      ipcRenderer.invoke("printer:openCashDrawer") as Promise<
+        import("../src/types/printer").PrintResult
+      >,
+    testPrint: () =>
+      ipcRenderer.invoke("printer:testPrint") as Promise<
+        import("../src/types/printer").PrintResult
+      >,
+    detectPrinters: () =>
+      ipcRenderer.invoke("printer:detectPrinters") as Promise<
+        import("../src/types/printer").DetectedPrinter[]
+      >,
+  },
+
   // ── Database management ───────────────────────────────────────────────────
   database: {
     backup: (targetPath: string) =>

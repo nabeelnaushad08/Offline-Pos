@@ -1,6 +1,6 @@
 "use client";
 
-import { Printer, ShoppingBag, X } from "lucide-react";
+import { Printer, ShoppingBag, X, Loader2, CheckCircle2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
 import type { CompletedSale } from "@/types/pos";
 
 const PAYMENT_LABEL: Record<string, string> = {
@@ -27,6 +28,8 @@ interface ReceiptModalProps {
   storeName?: string;
   onNewSale: () => void;
   onClose: () => void;
+  onPrint?: (sale: CompletedSale) => Promise<void>;
+  isPrinting?: boolean;
 }
 
 export function ReceiptModal({
@@ -35,7 +38,18 @@ export function ReceiptModal({
   storeName = "My Store",
   onNewSale,
   onClose,
+  onPrint,
+  isPrinting = false,
 }: ReceiptModalProps) {
+  const [printDone, setPrintDone] = useState(false);
+
+  const handlePrint = async () => {
+    if (!sale || !onPrint) return;
+    await onPrint(sale);
+    setPrintDone(true);
+    setTimeout(() => setPrintDone(false), 2500);
+  };
+
   if (!sale) return null;
 
   const date = new Date(sale.completedAt);
@@ -163,9 +177,21 @@ export function ReceiptModal({
 
         {/* Actions */}
         <div className="flex gap-2 border-t border-border px-5 py-4">
-          <Button variant="outline" className="flex-1 gap-2" size="sm" onClick={onClose}>
-            <Printer className="h-3.5 w-3.5" />
-            Print
+          <Button
+            variant="outline"
+            className="flex-1 gap-2"
+            size="sm"
+            onClick={handlePrint}
+            disabled={isPrinting || !onPrint}
+          >
+            {isPrinting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : printDone ? (
+              <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+            ) : (
+              <Printer className="h-3.5 w-3.5" />
+            )}
+            {isPrinting ? "Printing…" : printDone ? "Printed!" : "Print"}
           </Button>
           <Button className="flex-1 gap-2" size="sm" onClick={onNewSale}>
             <ShoppingBag className="h-3.5 w-3.5" />

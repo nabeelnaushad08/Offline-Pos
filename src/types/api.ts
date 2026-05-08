@@ -3,6 +3,7 @@
 import type { AuthUser, LoginResult, ValidateSessionResult, ChangePasswordResult } from "./auth";
 import type { DashboardData } from "./dashboard";
 import type { POSProduct, POSCategory, POSCustomer, CompleteSaleInput, CompleteSaleResult } from "./pos";
+import type { PrinterConfig, PrinterStatusInfo, ReceiptData, PrintResult, DetectedPrinter } from "./printer";
 
 export type { AuthUser, AuthRole, AuthSession, LoginResult, ValidateSessionResult, ChangePasswordResult } from "./auth";
 
@@ -65,6 +66,15 @@ export interface ElectronAPI {
     completeSale: (input: CompleteSaleInput) => Promise<CompleteSaleResult>;
   };
 
+  printer: {
+    getStatus: () => Promise<PrinterStatusInfo>;
+    saveConfig: (config: PrinterConfig) => Promise<PrintResult>;
+    printReceipt: (data: ReceiptData) => Promise<PrintResult>;
+    openCashDrawer: () => Promise<PrintResult>;
+    testPrint: () => Promise<PrintResult>;
+    detectPrinters: () => Promise<DetectedPrinter[]>;
+  };
+
   database: {
     backup: (targetPath: string) => Promise<BackupResult>;
     getInfo: () => Promise<DatabaseInfo>;
@@ -72,3 +82,4 @@ export interface ElectronAPI {
 }
 
 export type { DashboardData, POSProduct, POSCategory, POSCustomer, CompleteSaleInput, CompleteSaleResult };
+export type { PrinterConfig, PrinterStatusInfo, ReceiptData, PrintResult, DetectedPrinter };

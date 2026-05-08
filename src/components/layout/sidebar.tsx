@@ -58,7 +58,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "System",
     items: [
       { label: "Database", href: "/database", icon: Database, badge: "Soon" },
-      { label: "Settings", href: "/settings", icon: Settings, badge: "Soon" },
+      { label: "Settings", href: "/settings", icon: Settings },
     ],
   },
 ];

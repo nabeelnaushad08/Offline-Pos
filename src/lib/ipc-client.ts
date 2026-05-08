@@ -4,6 +4,7 @@ import { isElectron } from "./utils";
 import type { SettingRecord, DatabaseInfo, BackupResult, LoginResult, ValidateSessionResult, ChangePasswordResult, DashboardData, POSProduct, POSCategory, POSCustomer, CompleteSaleInput, CompleteSaleResult } from "@/types/api";
 import type { InventoryProduct, InventoryCategory, InventorySupplier, InventoryPurchase, StockMovementRecord, StockAdjustInput, ReceivePurchaseItem, PurchaseFormValues } from "@/types/inventory";
 import type { DailySalesRow, MonthlySalesRow, TopProductRow, InventoryValuationSummary, CashFlowRow, SupplierPurchaseRow } from "@/types/reports";
+import type { PrinterConfig, PrinterStatusInfo, ReceiptData, PrintResult, DetectedPrinter } from "@/types/printer";
 
 function requireElectron(): Window["electron"] {
   if (!isElectron()) {
@@ -321,4 +322,26 @@ export const reportsClient = {
 
   supplierPurchases: (from: string, to: string): Promise<SupplierPurchaseRow[]> =>
     requireElectron().invoke<SupplierPurchaseRow[]>("reports:supplierPurchases", from, to),
+};
+
+// ── Printer ───────────────────────────────────────────────────────────────────
+
+export const printerClient = {
+  getStatus: (): Promise<PrinterStatusInfo> =>
+    requireElectron().invoke<PrinterStatusInfo>("printer:getStatus"),
+
+  saveConfig: (config: PrinterConfig): Promise<PrintResult> =>
+    requireElectron().invoke<PrintResult>("printer:saveConfig", config),
+
+  printReceipt: (data: ReceiptData): Promise<PrintResult> =>
+    requireElectron().invoke<PrintResult>("printer:printReceipt", data),
+
+  openCashDrawer: (): Promise<PrintResult> =>
+    requireElectron().invoke<PrintResult>("printer:openCashDrawer"),
+
+  testPrint: (): Promise<PrintResult> =>
+    requireElectron().invoke<PrintResult>("printer:testPrint"),
+
+  detectPrinters: (): Promise<DetectedPrinter[]> =>
+    requireElectron().invoke<DetectedPrinter[]>("printer:detectPrinters"),
 };

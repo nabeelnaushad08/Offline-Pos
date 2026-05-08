@@ -15,6 +15,7 @@ import { ReceiptModal } from "@/components/pos/receipt-modal";
 import { HeldBillsModal } from "@/components/pos/held-bills-modal";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { CompletedSale } from "@/types/pos";
+import type { ReceiptData } from "@/types/printer";
 
 export default function PosPage() {
   const { user } = useAuth();
@@ -43,6 +44,7 @@ export default function PosPage() {
   const [showReceipt, setShowReceipt] = useState(false);
   const [showHeld, setShowHeld] = useState(false);
   const [completedSale, setCompletedSale] = useState<CompletedSale | null>(null);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   const totals = getTotals();
 
@@ -121,6 +123,39 @@ export default function PosPage() {
         }
         saleId = result.saleId!;
         saleNumber = result.saleNumber!;
+
+        // Fire cash drawer + auto-print asynchronously (don't block UI)
+        const printerStatus = await window.electron.invoke<{ config: { enabled: boolean; cashDrawer: boolean; autoprint: boolean } | null }>("printer:getStatus");
+        const pc = printerStatus.config;
+        if (pc?.enabled) {
+          if (pc.cashDrawer && method === "CASH") {
+            window.electron.invoke("printer:openCashDrawer").catch(console.error);
+          }
+          if (pc.autoprint) {
+            const rd: ReceiptData = {
+              saleId,
+              saleNumber,
+              cashierName: user.fullName,
+              customerName: customerName ?? null,
+              completedAt: new Date().toISOString(),
+              items: items.map((item) => ({
+                name: item.name,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                itemDiscount: item.itemDiscount,
+                lineTotal: item.quantity * item.unitPrice - item.itemDiscount,
+              })),
+              subtotal: t.subtotal,
+              taxAmount: t.taxAmount,
+              discountAmount: t.itemDiscounts + t.cartDiscount,
+              grandTotal: t.grandTotal,
+              paidAmount: paid,
+              changeAmount: change,
+              paymentMethod: method,
+            };
+            window.electron.invoke("printer:printReceipt", rd).catch(console.error);
+          }
+        }
       }
 
       const sale: CompletedSale = {
@@ -205,6 +240,37 @@ export default function PosPage() {
         sale={completedSale}
         onNewSale={handleNewSale}
         onClose={() => setShowReceipt(false)}
+        isPrinting={isPrinting}
+        onPrint={async (sale) => {
+          if (!isElectron()) return;
+          setIsPrinting(true);
+          try {
+            const rd: ReceiptData = {
+              saleId: sale.saleId,
+              saleNumber: sale.saleNumber,
+              cashierName: sale.cashierName,
+              customerName: sale.customerName ?? null,
+              completedAt: sale.completedAt,
+              items: sale.items.map((item) => ({
+                name: item.name,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                itemDiscount: item.itemDiscount,
+                lineTotal: item.quantity * item.unitPrice - item.itemDiscount,
+              })),
+              subtotal: sale.subtotal,
+              taxAmount: sale.taxAmount,
+              discountAmount: sale.discountAmount,
+              grandTotal: sale.grandTotal,
+              paidAmount: sale.paidAmount,
+              changeAmount: sale.changeAmount,
+              paymentMethod: sale.paymentMethod,
+            };
+            await window.electron.invoke("printer:printReceipt", rd);
+          } finally {
+            setIsPrinting(false);
+          }
+        }}
       />
 
       <HeldBillsModal open={showHeld} onClose={() => setShowHeld(false)} />

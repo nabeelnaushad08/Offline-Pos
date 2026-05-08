@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { WifiOff, HardDrive, LogOut, ChevronDown, User } from "lucide-react";
+import { PrinterStatusBadge } from "@/components/printer/printer-status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAppStore } from "@/store/app-store";
@@ -67,6 +68,8 @@ export function Header() {
           <WifiOff className="h-3 w-3" />
           Offline
         </Badge>
+
+        <PrinterStatusBadge />
 
         {isElectron() && (
           <Badge variant="outline" className="gap-1.5 text-xs font-normal">
