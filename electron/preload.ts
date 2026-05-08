@@ -66,6 +66,14 @@ const electronAPI = {
       ipcRenderer.invoke("settings:delete", key) as Promise<void>,
   },
 
+  // ── Dashboard ─────────────────────────────────────────────────────────────
+  dashboard: {
+    getData: () =>
+      ipcRenderer.invoke("dashboard:getData") as Promise<
+        import("./ipc/dashboard.handler").DashboardData
+      >,
+  },
+
   // ── Database management ───────────────────────────────────────────────────
   database: {
     backup: (targetPath: string) =>

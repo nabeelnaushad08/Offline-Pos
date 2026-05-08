@@ -1,240 +1,191 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
-  CheckCircle2,
-  Database,
-  HardDrive,
-  Layers,
   ShoppingCart,
-  Zap,
+  DollarSign,
+  Package,
+  AlertTriangle,
+  Users,
+  ClipboardList,
+  RefreshCw,
 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { isElectron } from "@/lib/utils";
-import { databaseClient } from "@/lib/ipc-client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { StatCard } from "@/components/dashboard/stat-card";
+import { SalesChart } from "@/components/dashboard/sales-chart";
+import { TopProducts } from "@/components/dashboard/top-products";
+import { RecentTransactions } from "@/components/dashboard/recent-transactions";
+import { LowStockAlerts } from "@/components/dashboard/low-stock-alerts";
+import { QuickActions } from "@/components/dashboard/quick-actions";
+import { useDashboard } from "@/hooks/use-dashboard";
 
-const STACK = [
-  { label: "Electron", description: "Desktop runtime", status: "ready" },
-  { label: "Next.js 15", description: "App Router · Static export", status: "ready" },
-  { label: "TypeScript", description: "Strict mode", status: "ready" },
-  { label: "Tailwind CSS", description: "v3 · CSS variables", status: "ready" },
-  { label: "ShadCN UI", description: "Custom components", status: "ready" },
-  { label: "Prisma ORM", description: "SQLite · WAL mode", status: "ready" },
-  { label: "Zustand", description: "Persisted state", status: "ready" },
-  { label: "Framer Motion", description: "Animations", status: "ready" },
-];
+function formatCurrency(amount: number): string {
+  return "$" + amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
-const FEATURES = [
-  {
-    icon: ShoppingCart,
-    label: "Point of Sale",
-    description: "Fast checkout, receipt printing, cash/card handling",
-  },
-  {
-    icon: Layers,
-    label: "Inventory",
-    description: "Products, categories, stock tracking, low-stock alerts",
-  },
-  {
-    icon: Database,
-    label: "Local Database",
-    description: "SQLite with WAL mode — fully offline, no cloud required",
-  },
-  {
-    icon: HardDrive,
-    label: "Auto Backup",
-    description: "Scheduled database backups to a configurable path",
-  },
-  {
-    icon: Zap,
-    label: "Fast & Offline",
-    description: "Sub-millisecond queries, works without internet",
-  },
-];
-
-const container = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.06, delayChildren: 0.1 },
-  },
-};
-
-const item = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
-};
-
-interface DbInfo {
-  size: number;
-  path: string;
-  tables: string[];
+function formatCount(count: number): string {
+  return count.toLocaleString("en-US");
 }
 
 export default function DashboardPage() {
-  const [dbInfo, setDbInfo] = useState<DbInfo | null>(null);
-  const [dbError, setDbError] = useState(false);
-
-  useEffect(() => {
-    if (!isElectron()) return;
-    databaseClient
-      .getInfo()
-      .then(setDbInfo)
-      .catch(() => setDbError(true));
-  }, []);
+  const { data, isLoading, error, refresh } = useDashboard();
 
   return (
-    <motion.div
-      variants={container}
-      initial="hidden"
-      animate="show"
-      className="space-y-8 max-w-6xl"
-    >
-      {/* Hero */}
-      <motion.div variants={item} className="space-y-2">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 border border-primary/20">
-            <ShoppingCart className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              System Foundation
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              All core systems initialized and ready
-            </p>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Status banner */}
+    <div className="space-y-5">
+      {/* Page header */}
       <motion.div
-        variants={item}
-        className="flex items-center gap-3 rounded-lg border border-success/20 bg-success/5 px-4 py-3"
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="flex items-center justify-between"
       >
-        <CheckCircle2 className="h-5 w-5 shrink-0 text-success" />
         <div>
-          <p className="text-sm font-medium text-foreground">
-            Foundation layer is operational
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {isElectron()
-              ? "Running inside Electron — IPC bridge active"
-              : "Running in browser — Electron IPC unavailable (expected in dev)"}
+          <h1 className="text-xl font-bold tracking-tight text-foreground">Dashboard</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {data
+              ? `Updated ${new Date(data.generatedAt).toLocaleTimeString()}`
+              : "Loading…"}
           </p>
         </div>
-        <Badge variant="outline" className="ml-auto border-success/30 text-success text-xs">
-          v1.0.0
-        </Badge>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={refresh}
+          disabled={isLoading}
+          className="h-8 gap-1.5 text-xs"
+        >
+          <RefreshCw className={`h-3 w-3 ${isLoading ? "animate-spin" : ""}`} />
+          Refresh
+        </Button>
       </motion.div>
 
-      {/* Stack grid */}
-      <motion.div variants={item}>
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Technology Stack
-        </h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {STACK.map((tech) => (
-            <motion.div
-              key={tech.label}
-              whileHover={{ scale: 1.02 }}
-              transition={{ duration: 0.15 }}
-            >
-              <Card className="border-border/50">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">
-                        {tech.label}
-                      </p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {tech.description}
-                      </p>
-                    </div>
-                    <div className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-success" />
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* Upcoming modules */}
-      <motion.div variants={item}>
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Upcoming Modules
-        </h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map((feature) => {
-            const Icon = feature.icon;
-            return (
-              <Card key={feature.label} className="border-border/50 hover:border-primary/30 transition-colors">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
-                      <Icon className="h-4 w-4 text-primary" />
-                    </div>
-                    <CardTitle className="text-sm">{feature.label}</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-xs leading-relaxed">
-                    {feature.description}
-                  </CardDescription>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </motion.div>
-
-      {/* Database info — only in Electron */}
-      {isElectron() && (
-        <motion.div variants={item}>
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            Database
-          </h2>
-          <Card className="border-border/50">
-            <CardContent className="p-4">
-              {dbError && (
-                <p className="text-sm text-destructive">
-                  Could not read database info — run migrations first: <code className="font-mono text-xs">npm run db:migrate</code>
-                </p>
-              )}
-              {dbInfo && (
-                <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                  <div>
-                    <dt className="text-xs text-muted-foreground">Size</dt>
-                    <dd className="mt-1 text-sm font-mono font-semibold text-foreground">
-                      {(dbInfo.size / 1024).toFixed(1)} KB
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-muted-foreground">Tables</dt>
-                    <dd className="mt-1 text-sm font-mono font-semibold text-foreground">
-                      {dbInfo.tables.length}
-                    </dd>
-                  </div>
-                  <div className="col-span-2 sm:col-span-1">
-                    <dt className="text-xs text-muted-foreground">Path</dt>
-                    <dd className="mt-1 truncate text-xs font-mono text-muted-foreground">
-                      {dbInfo.path}
-                    </dd>
-                  </div>
-                </dl>
-              )}
-              {!dbInfo && !dbError && (
-                <p className="text-sm text-muted-foreground animate-pulse">
-                  Loading database info…
-                </p>
-              )}
-            </CardContent>
-          </Card>
+      {/* Error banner */}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+        >
+          {error}
         </motion.div>
       )}
-    </motion.div>
+
+      {/* Quick actions */}
+      <QuickActions />
+
+      {/* KPI cards */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
+        {isLoading ? (
+          Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i} className="border-border/50">
+              <CardContent className="p-5 space-y-3">
+                <div className="flex justify-between">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-9 w-9 rounded-xl" />
+                </div>
+                <Skeleton className="h-7 w-28" />
+                <Skeleton className="h-4 w-24 rounded-full" />
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <>
+            <StatCard
+              title="Today's Sales"
+              value={formatCurrency(data?.stats.todaySales.amount ?? 0)}
+              subtitle={`${formatCount(data?.stats.todaySales.count ?? 0)} transactions`}
+              change={data?.stats.todaySales.change}
+              icon={ShoppingCart}
+              iconColor="text-primary"
+              iconBg="bg-primary/10"
+              delay={0}
+            />
+            <StatCard
+              title="Month Revenue"
+              value={formatCurrency(data?.stats.monthRevenue.amount ?? 0)}
+              subtitle={`${formatCount(data?.stats.monthRevenue.count ?? 0)} sales`}
+              change={data?.stats.monthRevenue.change}
+              icon={DollarSign}
+              iconColor="text-success"
+              iconBg="bg-success/10"
+              delay={0.04}
+            />
+            <StatCard
+              title="Total Products"
+              value={formatCount(data?.stats.totalProducts ?? 0)}
+              subtitle="Active items"
+              icon={Package}
+              iconColor="text-blue-500"
+              iconBg="bg-blue-500/10"
+              delay={0.08}
+            />
+            <StatCard
+              title="Low Stock"
+              value={formatCount(data?.stats.lowStockCount ?? 0)}
+              subtitle="Need reorder"
+              icon={AlertTriangle}
+              iconColor="text-warning"
+              iconBg="bg-warning/10"
+              delay={0.12}
+            />
+            <StatCard
+              title="Customers"
+              value={formatCount(data?.stats.activeCustomers ?? 0)}
+              subtitle="Active accounts"
+              icon={Users}
+              iconColor="text-purple-500"
+              iconBg="bg-purple-500/10"
+              delay={0.16}
+            />
+            <StatCard
+              title="Pending POs"
+              value={formatCount(data?.stats.pendingPurchases ?? 0)}
+              subtitle="Purchase orders"
+              icon={ClipboardList}
+              iconColor="text-orange-500"
+              iconBg="bg-orange-500/10"
+              delay={0.2}
+            />
+          </>
+        )}
+      </div>
+
+      {/* Sales chart */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: "easeOut", delay: 0.15 }}
+      >
+        <Card className="border-border/50">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-semibold">Revenue (7 Days)</CardTitle>
+              {data && (
+                <span className="text-xs text-muted-foreground">
+                  Total:{" "}
+                  <span className="font-semibold text-foreground">
+                    {formatCurrency(data.salesChart.reduce((s, d) => s + d.revenue, 0))}
+                  </span>
+                </span>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="pb-4">
+            <SalesChart data={data?.salesChart ?? []} isLoading={isLoading} />
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Bottom row: top products + low stock */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <TopProducts products={data?.topProducts ?? []} isLoading={isLoading} />
+        <LowStockAlerts products={data?.lowStockProducts ?? []} isLoading={isLoading} />
+      </div>
+
+      {/* Recent transactions */}
+      <RecentTransactions transactions={data?.recentTransactions ?? []} isLoading={isLoading} />
+    </div>
   );
 }

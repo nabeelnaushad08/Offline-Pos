@@ -1,7 +1,7 @@
 "use client";
 
 import { isElectron } from "./utils";
-import type { SettingRecord, DatabaseInfo, BackupResult, LoginResult, ValidateSessionResult, ChangePasswordResult } from "@/types/api";
+import type { SettingRecord, DatabaseInfo, BackupResult, LoginResult, ValidateSessionResult, ChangePasswordResult, DashboardData } from "@/types/api";
 
 function requireElectron(): Window["electron"] {
   if (!isElectron()) {
@@ -51,6 +51,13 @@ export const settingsClient = {
 
   delete: (key: string): Promise<void> =>
     requireElectron().settings.delete(key),
+};
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+
+export const dashboardClient = {
+  getData: (): Promise<DashboardData> =>
+    requireElectron().dashboard.getData(),
 };
 
 // ── Database ──────────────────────────────────────────────────────────────────

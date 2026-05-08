@@ -1,6 +1,7 @@
 // Exported types shared between the Electron bridge and the renderer
 
 import type { AuthUser, LoginResult, ValidateSessionResult, ChangePasswordResult } from "./auth";
+import type { DashboardData } from "./dashboard";
 
 export type { AuthUser, AuthRole, AuthSession, LoginResult, ValidateSessionResult, ChangePasswordResult } from "./auth";
 
@@ -51,8 +52,14 @@ export interface ElectronAPI {
     delete: (key: string) => Promise<void>;
   };
 
+  dashboard: {
+    getData: () => Promise<DashboardData>;
+  };
+
   database: {
     backup: (targetPath: string) => Promise<BackupResult>;
     getInfo: () => Promise<DatabaseInfo>;
   };
 }
+
+export type { DashboardData };
