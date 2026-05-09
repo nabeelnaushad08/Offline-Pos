@@ -11,7 +11,8 @@ const isDev = process.env.NODE_ENV === "development";
  */
 function getPrismaBin(): string {
   if (isDev) {
-    return path.join(process.cwd(), "node_modules", ".bin", "prisma");
+    const ext = process.platform === "win32" ? ".cmd" : "";
+    return path.join(process.cwd(), "node_modules", ".bin", `prisma${ext}`);
   }
   const resourcesPath = process.resourcesPath;
   const win = path.join(resourcesPath, "prisma", "dist", "bin.js");

@@ -37,7 +37,8 @@ export async function initDb(): Promise<void> {
   await db.$connect();
 
   // SQLite performance + correctness pragmas
-  await db.$executeRaw`PRAGMA journal_mode  = WAL`;
+  // journal_mode returns a result row so must use $queryRaw; others use $executeRaw
+  await db.$queryRaw`PRAGMA journal_mode  = WAL`;
   await db.$executeRaw`PRAGMA foreign_keys  = ON`;
   await db.$executeRaw`PRAGMA synchronous   = NORMAL`;
   await db.$executeRaw`PRAGMA cache_size    = -32000`; // 32 MB page cache
