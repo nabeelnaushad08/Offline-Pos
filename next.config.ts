@@ -13,9 +13,7 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
 
-  // Exclude server-only APIs that don't work in static export
   typescript: {
-    // Type errors are caught by our explicit tsc --noEmit step
     ignoreBuildErrors: false,
   },
 
@@ -23,8 +21,18 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
 
-  // Ensure consistent asset paths when loaded via file://
-  assetPrefix: undefined,
+  // Explicitly transpile ESM-only packages so webpack outputs valid CJS bundles
+  transpilePackages: ["framer-motion", "recharts"],
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  webpack(config: any, { dev }: { dev: boolean }) {
+    if (dev) {
+      // Replace eval-based source maps with inline source maps.
+      // Electron's renderer can reject eval() wrapped modules causing SyntaxErrors.
+      config.devtool = "inline-cheap-source-map";
+    }
+    return config;
+  },
 };
 
 export default nextConfig;
