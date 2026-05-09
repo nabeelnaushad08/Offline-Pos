@@ -36,14 +36,13 @@ export async function initDb(): Promise<void> {
   const db = getDb();
   await db.$connect();
 
-  // SQLite performance + correctness pragmas
-  // journal_mode returns a result row so must use $queryRaw; others use $executeRaw
+  // Use $queryRaw for all pragmas — some return result rows which $executeRaw rejects
   await db.$queryRaw`PRAGMA journal_mode  = WAL`;
-  await db.$executeRaw`PRAGMA foreign_keys  = ON`;
-  await db.$executeRaw`PRAGMA synchronous   = NORMAL`;
-  await db.$executeRaw`PRAGMA cache_size    = -32000`; // 32 MB page cache
-  await db.$executeRaw`PRAGMA temp_store    = MEMORY`;
-  await db.$executeRaw`PRAGMA mmap_size     = 268435456`; // 256 MB mmap
+  await db.$queryRaw`PRAGMA foreign_keys  = ON`;
+  await db.$queryRaw`PRAGMA synchronous   = NORMAL`;
+  await db.$queryRaw`PRAGMA cache_size    = -32000`;
+  await db.$queryRaw`PRAGMA temp_store    = MEMORY`;
+  await db.$queryRaw`PRAGMA mmap_size     = 268435456`;
 }
 
 export async function closeDb(): Promise<void> {
