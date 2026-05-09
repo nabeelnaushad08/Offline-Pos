@@ -153,6 +153,36 @@ const electronAPI = {
       >,
   },
 
+  // ── Backup / Restore ─────────────────────────────────────────────────────
+  backup: {
+    list: () =>
+      ipcRenderer.invoke("backup:list") as Promise<
+        import("../src/types/backup").BackupEntry[]
+      >,
+    create: (label?: string) =>
+      ipcRenderer.invoke("backup:create", label) as Promise<
+        import("../src/types/backup").BackupResult
+      >,
+    restore: (backupId: string) =>
+      ipcRenderer.invoke("backup:restore", backupId) as Promise<
+        import("../src/types/backup").RestoreResult
+      >,
+    delete: (backupId: string) =>
+      ipcRenderer.invoke("backup:delete", backupId) as Promise<
+        import("../src/types/backup").BackupOperationResult
+      >,
+    getSchedule: () =>
+      ipcRenderer.invoke("backup:getSchedule") as Promise<
+        import("../src/types/backup").BackupScheduleConfig
+      >,
+    saveSchedule: (config: import("../src/types/backup").BackupScheduleConfig) =>
+      ipcRenderer.invoke("backup:saveSchedule", config) as Promise<
+        import("../src/types/backup").BackupOperationResult
+      >,
+    getDir: () =>
+      ipcRenderer.invoke("backup:getDir") as Promise<string>,
+  },
+
   // ── Database management ───────────────────────────────────────────────────
   database: {
     backup: (targetPath: string) =>

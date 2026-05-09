@@ -8,6 +8,7 @@ import { registerPosHandlers } from "./pos.handler";
 import { registerInventoryHandlers } from "./inventory.handler";
 import { registerReportsHandlers } from "./reports.handler";
 import { registerPrinterHandlers } from "./printer.handler";
+import { registerBackupHandlers } from "./backup.handler";
 
 export async function registerIpcHandlers(): Promise<void> {
   registerAuthHandlers();
@@ -16,6 +17,7 @@ export async function registerIpcHandlers(): Promise<void> {
   registerInventoryHandlers();
   registerReportsHandlers();
   await registerPrinterHandlers();
+  await registerBackupHandlers();
   const db = getDb();
 
   // ── App ───────────────────────────────────────────────────────────────────

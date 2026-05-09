@@ -4,6 +4,7 @@ import type { AuthUser, LoginResult, ValidateSessionResult, ChangePasswordResult
 import type { DashboardData } from "./dashboard";
 import type { POSProduct, POSCategory, POSCustomer, CompleteSaleInput, CompleteSaleResult } from "./pos";
 import type { PrinterConfig, PrinterStatusInfo, ReceiptData, PrintResult, DetectedPrinter } from "./printer";
+import type { BackupEntry, BackupResult as BackupEntryResult, RestoreResult, BackupOperationResult, BackupScheduleConfig } from "./backup";
 
 export type { AuthUser, AuthRole, AuthSession, LoginResult, ValidateSessionResult, ChangePasswordResult } from "./auth";
 
@@ -24,7 +25,7 @@ export interface DatabaseInfo {
   tables: string[];
 }
 
-export interface BackupResult {
+export interface LegacyBackupResult {
   success: boolean;
   path: string;
 }
@@ -75,11 +76,22 @@ export interface ElectronAPI {
     detectPrinters: () => Promise<DetectedPrinter[]>;
   };
 
+  backup: {
+    list: () => Promise<BackupEntry[]>;
+    create: (label?: string) => Promise<BackupEntryResult>;
+    restore: (backupId: string) => Promise<RestoreResult>;
+    delete: (backupId: string) => Promise<BackupOperationResult>;
+    getSchedule: () => Promise<BackupScheduleConfig>;
+    saveSchedule: (config: BackupScheduleConfig) => Promise<BackupOperationResult>;
+    getDir: () => Promise<string>;
+  };
+
   database: {
-    backup: (targetPath: string) => Promise<BackupResult>;
+    backup: (targetPath: string) => Promise<LegacyBackupResult>;
     getInfo: () => Promise<DatabaseInfo>;
   };
 }
 
 export type { DashboardData, POSProduct, POSCategory, POSCustomer, CompleteSaleInput, CompleteSaleResult };
 export type { PrinterConfig, PrinterStatusInfo, ReceiptData, PrintResult, DetectedPrinter };
+export type { BackupEntry, BackupEntryResult, RestoreResult, BackupOperationResult, BackupScheduleConfig };

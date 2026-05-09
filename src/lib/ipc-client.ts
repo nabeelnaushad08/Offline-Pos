@@ -1,10 +1,11 @@
 "use client";
 
 import { isElectron } from "./utils";
-import type { SettingRecord, DatabaseInfo, BackupResult, LoginResult, ValidateSessionResult, ChangePasswordResult, DashboardData, POSProduct, POSCategory, POSCustomer, CompleteSaleInput, CompleteSaleResult } from "@/types/api";
+import type { SettingRecord, DatabaseInfo, LegacyBackupResult, LoginResult, ValidateSessionResult, ChangePasswordResult, DashboardData, POSProduct, POSCategory, POSCustomer, CompleteSaleInput, CompleteSaleResult } from "@/types/api";
 import type { InventoryProduct, InventoryCategory, InventorySupplier, InventoryPurchase, StockMovementRecord, StockAdjustInput, ReceivePurchaseItem, PurchaseFormValues } from "@/types/inventory";
 import type { DailySalesRow, MonthlySalesRow, TopProductRow, InventoryValuationSummary, CashFlowRow, SupplierPurchaseRow } from "@/types/reports";
 import type { PrinterConfig, PrinterStatusInfo, ReceiptData, PrintResult, DetectedPrinter } from "@/types/printer";
+import type { BackupEntry, BackupResult as BackupEntryResult, RestoreResult, BackupOperationResult, BackupScheduleConfig } from "@/types/backup";
 
 function requireElectron(): Window["electron"] {
   if (!isElectron()) {
@@ -85,7 +86,7 @@ export const dashboardClient = {
 // ── Database ──────────────────────────────────────────────────────────────────
 
 export const databaseClient = {
-  backup: (targetPath = ""): Promise<BackupResult> =>
+  backup: (targetPath = ""): Promise<LegacyBackupResult> =>
     requireElectron().database.backup(targetPath),
 
   getInfo: (): Promise<DatabaseInfo> =>
@@ -344,4 +345,29 @@ export const printerClient = {
 
   detectPrinters: (): Promise<DetectedPrinter[]> =>
     requireElectron().invoke<DetectedPrinter[]>("printer:detectPrinters"),
+};
+
+// ── Backup ────────────────────────────────────────────────────────────────────
+
+export const backupClient = {
+  list: (): Promise<BackupEntry[]> =>
+    requireElectron().invoke<BackupEntry[]>("backup:list"),
+
+  create: (label?: string): Promise<BackupEntryResult> =>
+    requireElectron().invoke<BackupEntryResult>("backup:create", label),
+
+  restore: (backupId: string): Promise<RestoreResult> =>
+    requireElectron().invoke<RestoreResult>("backup:restore", backupId),
+
+  delete: (backupId: string): Promise<BackupOperationResult> =>
+    requireElectron().invoke<BackupOperationResult>("backup:delete", backupId),
+
+  getSchedule: (): Promise<BackupScheduleConfig> =>
+    requireElectron().invoke<BackupScheduleConfig>("backup:getSchedule"),
+
+  saveSchedule: (config: BackupScheduleConfig): Promise<BackupOperationResult> =>
+    requireElectron().invoke<BackupOperationResult>("backup:saveSchedule", config),
+
+  getDir: (): Promise<string> =>
+    requireElectron().invoke<string>("backup:getDir"),
 };

@@ -13,6 +13,7 @@ import {
   BarChart3,
   Settings,
   Database,
+  HardDrive,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
@@ -57,6 +58,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "System",
     items: [
+      { label: "Backup", href: "/backup", icon: HardDrive },
       { label: "Database", href: "/database", icon: Database, badge: "Soon" },
       { label: "Settings", href: "/settings", icon: Settings },
     ],
