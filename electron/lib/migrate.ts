@@ -45,6 +45,12 @@ function getDbUrl(): string {
  * Safe to run on every startup — it is idempotent.
  */
 export async function runMigrations(): Promise<void> {
+  // In dev, migrations are managed manually via `npm run db:migrate`
+  if (isDev) {
+    console.log("[Migrate] Skipping migrations in development mode");
+    return;
+  }
+
   const migrationsDir = getMigrationsDir();
 
   if (!fs.existsSync(migrationsDir)) {
