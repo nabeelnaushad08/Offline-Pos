@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* System font stacks — no Google Fonts network dependency */
+:root {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "JetBrains Mono", Consolas,
+    "Courier New", monospace;
+}
+
 @layer base {
   :root {
     /* Dark theme as default — optimized for long POS workday sessions */
