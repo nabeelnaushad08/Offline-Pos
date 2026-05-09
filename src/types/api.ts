@@ -37,6 +37,8 @@ export interface ElectronAPI {
     getVersion: () => Promise<string>;
     getPlatform: () => Promise<string>;
     getDataPath: () => Promise<string>;
+    setAutoLaunch: (enable: boolean) => Promise<{ success: boolean }>;
+    getAutoLaunch: () => Promise<boolean>;
   };
 
   auth: {

@@ -20,6 +20,8 @@ export const appClient = {
   getVersion: () => requireElectron().app.getVersion(),
   getPlatform: () => requireElectron().app.getPlatform(),
   getDataPath: () => requireElectron().app.getDataPath(),
+  setAutoLaunch: (enable: boolean) => requireElectron().app.setAutoLaunch(enable),
+  getAutoLaunch: () => requireElectron().app.getAutoLaunch(),
 };
 
 // ── Auth ─────────────────────────────────────────────────────────────────────

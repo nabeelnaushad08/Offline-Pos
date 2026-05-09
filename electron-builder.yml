@@ -1,60 +1,140 @@
 appId: com.offlinepos.app
 productName: Offline POS
-copyright: Copyright © 2024 Offline POS
+copyright: "Copyright © 2024 Offline POS"
 
+# ── Output ────────────────────────────────────────────────────────────────────
 directories:
   output: dist
   buildResources: build
 
+# ── Files packed into the ASAR archive ───────────────────────────────────────
 files:
   - electron-dist/**/*
   - out/**/*
-  - prisma/schema.prisma
   - package.json
-  - "!node_modules/**/*"
+  - "!electron/**"
+  - "!src/**"
+  - "!public/**"
+  - "!scripts/**"
+  - "!backups/**"
+  - "!database/**"
+  - "!node_modules/**"
+  - "!**/*.map"
+  - "!**/*.ts"
+  - "!**/test/**"
+  - "!**/tests/**"
+  - "!**/__tests__/**"
+  - "!**/*.spec.*"
+  - "!**/*.test.*"
 
+# ── Extra resources outside ASAR ─────────────────────────────────────────────
 extraResources:
-  - from: node_modules/.prisma
-    to: .prisma
+  # Prisma migration files (used by migrate deploy on startup)
+  - from: prisma/migrations
+    to: prisma/migrations
+    filter: ["**/*"]
+  # Schema file (required by Prisma CLI)
+  - from: prisma/schema.prisma
+    to: prisma/schema.prisma
+  # Query engine native binaries (must be unpacked — not in ASAR)
+  - from: node_modules/.prisma/client
+    to: .prisma/client
+    filter:
+      - "**/*.node"
+      - "index.js"
+      - "default.js"
+      - "package.json"
+      - "schema.prisma"
+  # Prisma client JS
   - from: node_modules/@prisma/client
     to: "@prisma/client"
-  - from: node_modules/prisma
-    to: prisma
     filter:
       - "**/*"
       - "!node_modules"
+  # Prisma CLI (for migrate deploy)
+  - from: node_modules/prisma
+    to: prisma-cli
+    filter:
+      - "**/*"
+      - "!node_modules"
+      - "!*.md"
+  # App icon (resolved in main.ts at runtime)
+  - from: build
+    to: build
+    filter: ["*.ico", "*.png", "*.icns"]
 
-extraMetadata:
-  main: electron-dist/main.js
-
+# ── ASAR ──────────────────────────────────────────────────────────────────────
 asar: true
 asarUnpack:
+  # Native .node addons must live outside the ASAR archive
   - "**/*.node"
-  - "**/node_modules/.prisma/**"
 
+# ── Compression ───────────────────────────────────────────────────────────────
+compression: normal
+
+# ── Metadata ──────────────────────────────────────────────────────────────────
+extraMetadata:
+  main: electron-dist/electron/main.js
+
+# ── Windows ───────────────────────────────────────────────────────────────────
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.ico
+  requestedExecutionLevel: asInvoker
+
+# ── NSIS installer wizard ─────────────────────────────────────────────────────
+nsis:
+  # Show full installation wizard (not silent one-click)
+  oneClick: false
+  # User can choose install directory
+  allowToChangeInstallationDirectory: true
+  # Elevate if user picks a system-wide directory
+  allowElevation: true
+  # Install for current user by default (no UAC prompt)
+  perMachine: false
+
+  # Shortcuts
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: "Offline POS"
+  menuCategory: "Offline POS"
+
+  # Launch the app after the installer finishes
+  runAfterFinish: true
+
+  # Icons for installer/uninstaller dialogs
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
+
+  # Language
+  language: "1033"
+
+  # Custom NSIS script: adds "Launch on Windows Startup" checkbox
+  include: scripts/installer.nsh
+
+# ── macOS ─────────────────────────────────────────────────────────────────────
 mac:
   category: public.app-category.business
   icon: build/icon.icns
   hardenedRuntime: true
   gatekeeperAssess: false
-
-win:
   target:
-    - target: nsis
-      arch:
-        - x64
-  icon: build/icon.ico
+    - target: dmg
+      arch: [x64, arm64]
 
+dmg:
+  title: "Offline POS Installer"
+
+# ── Linux ─────────────────────────────────────────────────────────────────────
 linux:
   target:
     - target: AppImage
-      arch:
-        - x64
+      arch: [x64]
   icon: build/icon.png
   category: Office
 
-nsis:
-  oneClick: false
-  allowToChangeInstallationDirectory: true
-  createDesktopShortcut: true
-  createStartMenuShortcut: true
+# ── Publish ───────────────────────────────────────────────────────────────────
+publish: null

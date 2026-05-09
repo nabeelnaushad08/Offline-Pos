@@ -448,11 +448,28 @@ function SystemSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [backupMsg, setBackupMsg] = useState("");
+  const [autoLaunch, setAutoLaunch] = useState(false);
+  const [isTogglingAutoLaunch, setIsTogglingAutoLaunch] = useState(false);
 
   useEffect(() => {
     if (!isElectron()) { setIsLoading(false); return; }
-    window.electron.database.getInfo().then(setDbInfo).finally(() => setIsLoading(false));
+    Promise.all([
+      window.electron.database.getInfo().then(setDbInfo),
+      window.electron.app.getAutoLaunch().then(setAutoLaunch).catch(() => {}),
+    ]).finally(() => setIsLoading(false));
   }, []);
+
+  const handleToggleAutoLaunch = async () => {
+    if (!isElectron()) return;
+    setIsTogglingAutoLaunch(true);
+    try {
+      const next = !autoLaunch;
+      await window.electron.app.setAutoLaunch(next);
+      setAutoLaunch(next);
+    } finally {
+      setIsTogglingAutoLaunch(false);
+    }
+  };
 
   const handleBackup = async () => {
     if (!isElectron()) return;
@@ -493,6 +510,31 @@ function SystemSettings() {
         ) : (
           <p className="text-xs text-muted-foreground">Not available in browser mode</p>
         )}
+      </div>
+
+      {/* Auto-launch */}
+      <div className="rounded-xl border border-border/60 bg-card p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-foreground">Launch on Windows Startup</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Automatically start Offline POS when Windows boots
+            </p>
+          </div>
+          <button
+            onClick={handleToggleAutoLaunch}
+            disabled={isTogglingAutoLaunch || !isElectron()}
+            className={cn(
+              "relative h-6 w-11 rounded-full transition-colors disabled:opacity-50",
+              autoLaunch ? "bg-primary" : "bg-muted"
+            )}
+          >
+            <span className={cn(
+              "absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
+              autoLaunch ? "left-6" : "left-1"
+            )} />
+          </button>
+        </div>
       </div>
 
       {backupMsg && (

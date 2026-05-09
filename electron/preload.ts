@@ -9,6 +9,10 @@ const electronAPI = {
     getVersion: () => ipcRenderer.invoke("app:getVersion") as Promise<string>,
     getPlatform: () => ipcRenderer.invoke("app:getPlatform") as Promise<string>,
     getDataPath: () => ipcRenderer.invoke("app:getDataPath") as Promise<string>,
+    setAutoLaunch: (enable: boolean) =>
+      ipcRenderer.invoke("app:setAutoLaunch", enable) as Promise<{ success: boolean }>,
+    getAutoLaunch: () =>
+      ipcRenderer.invoke("app:getAutoLaunch") as Promise<boolean>,
   },
 
   // ── Authentication ────────────────────────────────────────────────────────
